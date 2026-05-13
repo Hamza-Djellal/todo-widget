@@ -1,71 +1,40 @@
 import St from 'gi://St';
 import GObject from 'gi://GObject';
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
+import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
-import { VitalItem } from './vitals.js';
-import { VitalType } from './config.js';
-import { CPUSensor } from './sensors/cpu.js';
-import { RAMSensor } from './sensors/ram.js';
-import { StorageSensor } from './sensors/storage.js';
-import { TempSensor } from './sensors/temp.js';
-import { GPUSensor } from './sensors/gpu.js';
 
-type VitalItemInstance = InstanceType<typeof VitalItem>;
-
-const VitalsWidget = GObject.registerClass(
-  class VitalsWidget extends St.BoxLayout {
-    private _vitals: Map<VitalType, VitalItemInstance>;
-    private _sensors: Map<VitalType, any>;
+const TodoWidget = GObject.registerClass(
+  class TodoWidget extends St.BoxLayout {
     private _settings: any;
-    private _intervals: Map<VitalType, number> = new Map();
     private _handlerIds: number[] = [];
+    private _intervalId: number | null = null;
+    private _taskLabels: St.Label[] = [];
 
     constructor(settings: any) {
       super({
-        style_class: 'vitals-widget-container',
+        style_class: 'todo-widget-container',
+        vertical: true,
         reactive: true,
         can_focus: true,
       });
 
       this._settings = settings;
-      this._vitals = new Map();
-      this._sensors = new Map();
 
       this._buildUI();
-      this._initializeSensors();
       this._connectSettings();
       this._updatePosition();
       this._startUpdates();
+      this._updateTodoList();
     }
 
     private _buildUI(): void {
       this._updateContainerStyle();
     }
 
-    private _initializeSensors(): void {
-      this._sensors.set(VitalType.CPU, new CPUSensor());
-      this._sensors.set(VitalType.RAM, new RAMSensor());
-      this._sensors.set(VitalType.STORAGE, new StorageSensor());
-      this._sensors.set(VitalType.TEMP, new TempSensor());
-      this._sensors.set(VitalType.GPU, new GPUSensor());
-
-      Object.values(VitalType).forEach((type) => {
-        const sensor = this._sensors.get(type); // Get the specific sensor
-        const vital = new VitalItem(
-          type,
-          this._settings,
-          sensor,
-        ) as VitalItemInstance;
-        this._vitals.set(type, vital);
-        this.add_child(vital);
-      });
-
-      this._updateVitalsVisibility();
-    }
-
     private _connectSettings(): void {
-      // Track every handler ID to disconnect them in destroy()
       this._handlerIds.push(
         this._settings.connect('changed::position-x', () =>
           this._updatePosition(),
@@ -80,42 +49,32 @@ const VitalsWidget = GObject.registerClass(
       const styleKeys = [
         'background-color',
         'border-color',
+        'text-color',
         'border-radius',
-        'vital-spacing',
         'padding-horizontal',
         'padding-vertical',
-        'orientation',
+        'label-font-size'
       ];
       styleKeys.forEach((key) => {
         this._handlerIds.push(
           this._settings.connect(`changed::${key}`, () => {
-            if (this._vitals.size === 0) return;
             this._updateContainerStyle();
-            this.vertical =
-              this._settings.get_string('orientation') === 'vertical';
+            this._updateTodoList();
           }),
         );
       });
 
-      Object.values(VitalType).forEach((type) => {
-        this._handlerIds.push(
-          this._settings.connect(`changed::show-${type}`, () =>
-            this._updateVitalsVisibility(),
-          ),
-        );
-        this._handlerIds.push(
-          this._settings.connect(`changed::${type}-update-interval`, () => {
-            this._restartVitalTimer(type);
-          }),
-        );
-      });
+      this._handlerIds.push(
+        this._settings.connect(`changed::update-interval`, () => {
+          this._startUpdates();
+        }),
+      );
     }
 
     private _updateContainerStyle(): void {
       const bgColor = this._settings.get_string('background-color');
       const borderColor = this._settings.get_string('border-color');
       const borderRadius = this._settings.get_int('border-radius');
-      const spacing = this._settings.get_int('vital-spacing');
       const padH = this._settings.get_int('padding-horizontal');
       const padV = this._settings.get_int('padding-vertical');
 
@@ -124,14 +83,7 @@ const VitalsWidget = GObject.registerClass(
             border: 2px solid ${borderColor};
             border-radius: ${borderRadius}px;
             padding: ${padV}px ${padH}px;
-            spacing: ${spacing}px;
         `);
-    }
-
-    private _updateVitalsVisibility(): void {
-      this._vitals.forEach((vital, type) => {
-        vital.visible = this._settings.get_boolean(`show-${type}`);
-      });
     }
 
     private _updatePosition(): void {
@@ -144,67 +96,92 @@ const VitalsWidget = GObject.registerClass(
     }
 
     private _startUpdates(): void {
-      this._clearTimers();
-      this._sensors.forEach((sensor, type) => {
-        this._restartVitalTimer(type);
+      this._clearTimer();
+      const interval = this._settings.get_int('update-interval');
+      this._intervalId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
+        this._updateTodoList();
+        return GLib.SOURCE_CONTINUE;
       });
     }
 
-    private _restartVitalTimer(type: VitalType): void {
-      const oldId = this._intervals.get(type);
-      if (oldId) GLib.source_remove(oldId);
+    private _clearTimer(): void {
+      if (this._intervalId !== null) {
+        GLib.source_remove(this._intervalId);
+        this._intervalId = null;
+      }
+    }
 
-      const interval = this._settings.get_int(`${type}-update-interval`);
-      const id = GLib.timeout_add(GLib.PRIORITY_DEFAULT, interval, () => {
-        const vital = this._vitals.get(type);
-        const sensor = this._sensors.get(type);
+    private async _updateTodoList(): Promise<void> {
+      let path = this._settings.get_string('todo-file-path');
+      if (path.startsWith('~/')) {
+        path = GLib.get_home_dir() + path.slice(1);
+      }
 
-        if (this._vitals.size > 0 && vital && vital.visible && sensor) {
-          sensor
-            .getValue()
-            .then((value: number) => {
-              vital.update(value);
-            })
-            .catch((err: any) => {
-              console.error(`[VitalsWidget] Error getting ${type} value:`, err);
-              vital.update(0);
-            });
-          return GLib.SOURCE_CONTINUE;
+      try {
+        const file = Gio.File.new_for_path(path);
+        const [success, contents] = file.load_contents(null);
+
+        if (success) {
+            const decoder = new TextDecoder('utf-8');
+            const text = decoder.decode(contents);
+            const lines = text.split('\n').filter(line => line.trim().length > 0);
+            this._renderTasks(lines);
+        } else {
+            this._renderTasks(['(Todo file not found or empty)']);
         }
-        return GLib.SOURCE_REMOVE;
-      });
-      this._intervals.set(type, id);
+      } catch (err) {
+        console.error(`[TodoWidget] Error reading file at ${path}:`, err);
+        this._renderTasks([`Error reading ${path}`]);
+      }
     }
 
-    private _clearTimers(): void {
-      this._intervals.forEach((id) => GLib.source_remove(id));
-      this._intervals.clear();
+    private _renderTasks(tasks: string[]): void {
+      this.destroy_all_children();
+      this._taskLabels = [];
+      const fontSize = this._settings.get_int('label-font-size');
+      const textColor = this._settings.get_string('text-color');
+
+      // Add a wrapper box that forces left alignment
+      const contentBox = new St.BoxLayout({
+          vertical: true,
+          x_expand: true,
+          x_align: Clutter.ActorAlign.START
+      });
+
+      const titleLabel = new St.Label({
+        text: 'TODO LIST',
+        style: `font-size: ${fontSize + 2}px; font-weight: bold; margin-bottom: 8px; color: ${textColor};`
+      });
+      contentBox.add_child(titleLabel);
+
+      tasks.forEach((task) => {
+        const label = new St.Label({
+          text: `• ${task}`,
+          style: `font-size: ${fontSize}px; margin-bottom: 4px; color: ${textColor};`
+        });
+        this._taskLabels.push(label);
+        contentBox.add_child(label);
+      });
+
+      this.add_child(contentBox);
     }
 
     destroy(): void {
-      // 1. Kill timers
-      this._clearTimers();
-
-      // 2. Disconnect all settings signals
+      this._clearTimer();
       this._handlerIds.forEach((id) => this._settings.disconnect(id));
       this._handlerIds = [];
-
-      // 3. Destroy children
-      this._sensors.forEach((sensor) => sensor.destroy?.());
-      this._vitals.forEach((vital) => vital.destroy());
-      this._vitals.clear();
-
+      this.destroy_all_children();
       super.destroy();
     }
   },
 );
 
-export default class VitalsWidgetExtension extends Extension {
-  private _widget: InstanceType<typeof VitalsWidget> | null = null;
+export default class TodoWidgetExtension extends Extension {
+  private _widget: InstanceType<typeof TodoWidget> | null = null;
 
   enable(): void {
     const settings = this.getSettings();
-    this._widget = new VitalsWidget(settings);
+    this._widget = new TodoWidget(settings);
     Main.layoutManager._backgroundGroup.add_child(this._widget);
   }
 

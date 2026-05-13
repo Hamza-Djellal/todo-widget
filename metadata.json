@@ -1,12 +1,8 @@
 {
-  "uuid": "vitalsWidget@ctrln3rd.github.com",
-  "name": "vitals widget",
-  "description": "Instantly monitor CPU usage, RAM, GPU performance, and temperatures right on your desktop.",
+  "uuid": "todoWidget@openclaw.local",
+  "name": "Todo Widget",
+  "description": "A minimal desktop widget to display tasks from a plain text file.",
   "shell-version": ["45", "46", "47", "48", "49", "50"],
-  "url": "https://github.com/ctrln3rd/vitals-widget",
-  "version": 3,
-  "settings-schema": "org.gnome.shell.extensions.vitalswidget",
-  "donations": {
-    "kofi": "austinemk"
-  }
+  "version": 1,
+  "settings-schema": "org.gnome.shell.extensions.todowidget"
 }
