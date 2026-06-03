@@ -1,5 +1,5 @@
 {
-  "uuid": "todoWidget@openclaw.local",
+  "uuid": "todoWidget@Hamza-Djellal.github.com",
   "name": "Todo Widget",
   "description": "A minimal desktop widget to display tasks from a plain text file.",
   "shell-version": ["45", "46", "47", "48", "49", "50"],

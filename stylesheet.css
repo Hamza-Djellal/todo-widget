@@ -1,59 +1,113 @@
+/* Modern Todo Widget GNOME Shell Stylesheet */
 
-/* Main widget container */
-.vitals-widget-container {
-    margin: 0;
-    padding: 12px 16px;
-    transition: all 200ms ease;
-    cursor: move;
+/* Main widget container (desktop card) */
+.todo-widget-container {
+    background-color: rgba(30, 30, 30, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.vitals-widget-container:hover {
+/* Light theme variation override */
+.todo-widget-container.light {
+    background-color: rgba(240, 240, 240, 0.75);
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Header container */
+.todo-header {
+    margin-bottom: 12px;
+    spacing: 8px;
+}
+
+/* Title text */
+.todo-title {
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+/* Action button in the header */
+.todo-header-button {
+    background-color: transparent;
+    border-radius: 8px;
+    padding: 4px;
+    border: none;
+    color: inherit;
+}
+
+.todo-header-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.todo-widget-container.light .todo-header-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.todo-header-button:active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Task items list container */
+.todo-tasks-list {
+    spacing: 6px;
+}
+
+/* Single task row */
+.todo-task-row {
+    spacing: 8px;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+.todo-task-row:hover {
     background-color: rgba(255, 255, 255, 0.05);
 }
 
-/* Individual vital item */
-.vital-item {
-    spacing: 0;
+.todo-widget-container.light .todo-task-row:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+/* Task Checkbox */
+.todo-checkbox {
+    background-color: transparent;
+    border: none;
+    padding: 0;
     margin: 0;
-    padding: 0;
 }
 
-/* Circular progress canvas */
-.circular-progress {
-    margin: 0;
-    padding: 0;
+/* Task labels */
+.todo-task-text {
+    font-size: 13px;
 }
 
-/* Vital icon (inside circle) */
-.vital-icon {
-    margin: 0;
-    padding: 0;
+.todo-task-text-completed {
+    font-size: 13px;
+    text-decoration: line-through;
+    opacity: 0.5;
 }
 
-/* Vital label (below circle) */
-.vital-label {
-    font-size: 11px;
-    font-weight: 500;
-    margin-top: 4px;
-    padding: 0;
-    text-align: center;
-    transition: color 200ms ease;
+/* Text Entry for adding tasks */
+.todo-add-entry {
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #ffffff;
+    caret-color: #3584e4; /* GNOME Accent Blue */
+    font-size: 13px;
+    margin-top: 8px;
 }
 
-/* Responsive adjustments for smaller screens */
-@media (max-width: 1280px) {
-    .vitals-widget-container {
-        padding: 10px 14px;
-    }
-    
-    .vital-label {
-        font-size: 10px;
-    }
+.todo-widget-container.light .todo-add-entry {
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: #000000;
 }
 
-/* High contrast mode adjustments */
-@media (prefers-contrast: high) {
-    .vitals-widget-container {
-        border-width: 3px;
-    }
+.todo-add-entry:focus {
+    border-color: #3584e4;
+    box-shadow: inset 0 0 0 1px #3584e4;
 }
