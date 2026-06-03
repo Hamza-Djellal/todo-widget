@@ -15,15 +15,6 @@ A minimal, fully interactive desktop widget for GNOME Shell that displays and ma
 
 ---
 
-## Design Philosophy
-
-> "Simplicity is the ultimate sophistication."  
-> — Leonardo da Vinci
-
-Todo Widget is designed to sit cleanly on your desktop wallpaper. It acts as a lightweight, glassmorphic HUD that lets you monitor, complete, and add tasks instantly without opening heavy applications.
-
----
-
 ## Features
 
 - 📝 **Plain-Text Todo**: Reads tasks from a plain text file, defaulting to `~/todo.txt`.
