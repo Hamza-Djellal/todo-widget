@@ -19,6 +19,10 @@
     <key name="todo-file-path" type="s"><default>'~/todo.txt'</default></key>
     <key name="update-interval" type="i"><default>5000</default></key>
     
+    <key name="lock-position" type="b"><default>false</default></key>
+    <key name="completed-behavior" type="s"><default>'cross'</default></key>
+    <key name="show-completed" type="b"><default>true</default></key>
+    
     <key name="extension-path" type="s"><default>''</default></key>
   </schema>
 </schemalist>

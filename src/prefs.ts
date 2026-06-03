@@ -21,21 +21,23 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
     this._settings = this.getSettings();
 
     const page = new Adw.PreferencesPage();
-    const group = new Adw.PreferencesGroup({
-      title: 'Todo Widget Settings',
-      description: 'Configure your todo list desktop widget.',
-    });
-    page.add(group);
+    window.add(page);
 
-    // Themes
-    const themeRow = new Adw.ComboRow({
-      title: 'Theme',
-      subtitle: 'Select a preset theme',
-      model: Gtk.StringList.new(['Dark', 'Light', 'Dracula', 'Nord', 'Gruvbox']),
+    // Group 1: Appearance
+    const appearanceGroup = new Adw.PreferencesGroup({
+      title: 'Appearance',
+      description: 'Customize the styling and theme of the widget.',
     });
-    
-    // Map dropdown index to theme key
-    const themeKeys = ['dark', 'light', 'dracula', 'nord', 'gruvbox'];
+    page.add(appearanceGroup);
+
+    // Themes dropdown (includes System theme)
+    const themeKeys = ['system', 'dark', 'light', 'dracula', 'nord', 'gruvbox', 'custom'];
+    const themeRow = new Adw.ComboRow({
+      title: 'Theme Preset',
+      subtitle: 'Select a theme preset or use a custom one',
+      model: Gtk.StringList.new(['System', 'Dark', 'Light', 'Dracula', 'Nord', 'Gruvbox', 'Custom']),
+    });
+
     const currentTheme = this._settings.get_string('theme');
     const currentIndex = themeKeys.indexOf(currentTheme);
     if (currentIndex !== -1) {
@@ -45,44 +47,95 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
     themeRow.connect('notify::selected', () => {
       const selectedTheme = themeKeys[themeRow.selected];
       this._settings.set_string('theme', selectedTheme);
-      
-      // Apply theme colors
-      const themeColors = THEMES[selectedTheme as keyof typeof THEMES];
-      if (themeColors) {
-        this._settings.set_string('background-color', themeColors.bg);
-        this._settings.set_string('border-color', themeColors.border);
-        this._settings.set_string('text-color', themeColors.text);
-        
-        // Update UI rows
-        if (this._bgColorRow) this._bgColorRow.text = themeColors.bg;
-        if (this._borderColorRow) this._borderColorRow.text = themeColors.border;
-        if (this._textColorRow) this._textColorRow.text = themeColors.text;
+
+      if (selectedTheme !== 'custom' && selectedTheme !== 'system') {
+        const themeColors = THEMES[selectedTheme as keyof typeof THEMES];
+        if (themeColors) {
+          this._settings.set_string('background-color', themeColors.bg);
+          this._settings.set_string('border-color', themeColors.border);
+          this._settings.set_string('text-color', themeColors.text);
+
+          if (this._bgColorRow) this._bgColorRow.text = themeColors.bg;
+          if (this._borderColorRow) this._borderColorRow.text = themeColors.border;
+          if (this._textColorRow) this._textColorRow.text = themeColors.text;
+        }
       }
     });
-    group.add(themeRow);
+    appearanceGroup.add(themeRow);
 
-    // Appearance
-    this._bgColorRow = this._createColorRow('background-color', 'Background Color', 'Background color in rgba(...) format');
-    this._borderColorRow = this._createColorRow('border-color', 'Border Color', 'Border color in rgba(...) format');
-    this._textColorRow = this._createColorRow('text-color', 'Text Color', 'Text color in rgba(...) format');
-    
-    group.add(this._bgColorRow);
-    group.add(this._borderColorRow);
-    group.add(this._textColorRow);
-    group.add(this._createSpinRow('border-radius', 'Border Radius', 'Corner radius in pixels', 0, 50, 1));
-    group.add(this._createSpinRow('padding-horizontal', 'Horizontal Padding', 'Left and right padding in pixels', 0, 100, 1));
-    group.add(this._createSpinRow('padding-vertical', 'Vertical Padding', 'Top and bottom padding in pixels', 0, 100, 1));
+    // Custom Color Entries
+    this._bgColorRow = this._createColorRow('background-color', 'Custom Background Color', 'RGBA format (e.g. rgba(0,0,0,0.8))');
+    this._borderColorRow = this._createColorRow('border-color', 'Custom Border Color', 'RGBA format');
+    this._textColorRow = this._createColorRow('text-color', 'Custom Text Color', 'RGBA format');
 
-    // Position
-    group.add(this._createSpinRow('position-x', 'X Position (%)', 'Horizontal position on screen', 0, 100, 1));
-    group.add(this._createSpinRow('position-y', 'Y Position (%)', 'Vertical position on screen', 0, 100, 1));
+    appearanceGroup.add(this._bgColorRow);
+    appearanceGroup.add(this._borderColorRow);
+    appearanceGroup.add(this._textColorRow);
 
-    // Behavior
-    group.add(this._createSpinRow('label-font-size', 'Font Size', 'Size of task text in pixels', 8, 48, 1));
-    group.add(this._createStringRow('todo-file-path', 'Todo File Path', 'Path to your tasks file (e.g., ~/todo.txt)'));
-    group.add(this._createSpinRow('update-interval', 'Update Interval', 'Refresh time in milliseconds', 1000, 3600000, 1000));
+    appearanceGroup.add(this._createSpinRow('border-radius', 'Border Radius', 'Corner radius in pixels', 0, 50, 1));
+    appearanceGroup.add(this._createSpinRow('padding-horizontal', 'Horizontal Padding', 'Left and right padding in pixels', 0, 100, 1));
+    appearanceGroup.add(this._createSpinRow('padding-vertical', 'Vertical Padding', 'Top and bottom padding in pixels', 0, 100, 1));
+    appearanceGroup.add(this._createSpinRow('label-font-size', 'Font Size', 'Size of task text in pixels', 8, 48, 1));
 
-    window.add(page);
+    // Group 2: Behavior & Position
+    const behaviorGroup = new Adw.PreferencesGroup({
+      title: 'Behavior & Positioning',
+      description: 'Configure interaction and file settings.',
+    });
+    page.add(behaviorGroup);
+
+    // Lock position row (SwitchRow)
+    const lockPositionRow = new Adw.SwitchRow({
+      title: 'Lock Widget Position',
+      subtitle: 'Disable drag-and-drop to prevent accidental moves on the desktop',
+      active: this._settings.get_boolean('lock-position'),
+    });
+    lockPositionRow.connect('notify::active', () => {
+      this._settings.set_boolean('lock-position', lockPositionRow.active);
+    });
+    behaviorGroup.add(lockPositionRow);
+
+    // Show Completed tasks (SwitchRow)
+    const showCompletedRow = new Adw.SwitchRow({
+      title: 'Show Completed Tasks',
+      subtitle: 'Display checked-off tasks in the list',
+      active: this._settings.get_boolean('show-completed'),
+    });
+    showCompletedRow.connect('notify::active', () => {
+      this._settings.set_boolean('show-completed', showCompletedRow.active);
+    });
+    behaviorGroup.add(showCompletedRow);
+
+    // Completed task behavior (ComboRow)
+    const completedBehaviorRow = new Adw.ComboRow({
+      title: 'Completed Task Action',
+      subtitle: 'What happens when a task is checked off',
+      model: Gtk.StringList.new(['Cross out task (todo.txt style)', 'Delete task immediately']),
+    });
+    const behaviorKeys = ['cross', 'delete'];
+    const currentBehavior = this._settings.get_string('completed-behavior');
+    const behaviorIndex = behaviorKeys.indexOf(currentBehavior);
+    if (behaviorIndex !== -1) {
+      completedBehaviorRow.selected = behaviorIndex;
+    }
+    completedBehaviorRow.connect('notify::selected', () => {
+      this._settings.set_string('completed-behavior', behaviorKeys[completedBehaviorRow.selected]);
+    });
+    behaviorGroup.add(completedBehaviorRow);
+
+    // File path and interval
+    behaviorGroup.add(this._createStringRow('todo-file-path', 'Todo File Path', 'Path to your tasks file'));
+    behaviorGroup.add(this._createSpinRow('update-interval', 'Fallback Update Interval', 'Refresh time in milliseconds (0 to disable)', 0, 3600000, 1000));
+
+    // Fine-tuned manual position adjustment
+    const positionGroup = new Adw.PreferencesGroup({
+      title: 'Manual Position Fine-tuning',
+      description: 'Coordinates as percentage of the screen width and height.',
+    });
+    page.add(positionGroup);
+
+    positionGroup.add(this._createSpinRow('position-x', 'X Position (%)', 'Horizontal desktop coordinates', 0, 100, 1));
+    positionGroup.add(this._createSpinRow('position-y', 'Y Position (%)', 'Vertical desktop coordinates', 0, 100, 1));
   }
 
   private _createColorRow(key: string, title: string, subtitle: string): Adw.EntryRow {
@@ -93,7 +146,6 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
 
     row.connect('changed', () => {
       this._settings.set_string(key, row.text);
-      // Change theme to 'custom' if user edits a color
       this._settings.set_string('theme', 'custom');
     });
 
