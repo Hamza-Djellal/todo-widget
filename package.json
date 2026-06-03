@@ -8,7 +8,7 @@
     "compile": "tsc",
     "format": "prettier --write \"dist/**/*.js\"",
     "add-spacing": "bash add-spacing.sh",
-    "copy-assets": "cp metadata.json stylesheet.css dist/ && cp -r schemas dist/ 2>/dev/null || :",
+    "copy-assets": "cp metadata.json stylesheet.css dist/ && (cp icon.png dist/ 2>/dev/null || :) && cp -r schemas dist/ 2>/dev/null || :",
     "build": "npm run clean && npm run compile && npm run copy-assets && npm run format && npm run add-spacing",
     "install-local": "npm run build && ./install.sh",
     "zip": "npm run build && cd dist && zip -r ../extension.zip ."
