@@ -6,7 +6,6 @@ import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-// Helper function to create a directory asynchronously
 function makeDirectoryAsync(file: Gio.File): Promise<void> {
   return new Promise((resolve, reject) => {
     file.make_directory_async(GLib.PRIORITY_DEFAULT, null, (_f, res) => {
@@ -20,7 +19,6 @@ function makeDirectoryAsync(file: Gio.File): Promise<void> {
   });
 }
 
-// Helper function to create directories recursively asynchronously
 async function makeDirectoryWithParentsAsync(file: Gio.File): Promise<void> {
   try {
     await makeDirectoryAsync(file);
@@ -47,7 +45,6 @@ async function makeDirectoryWithParentsAsync(file: Gio.File): Promise<void> {
   }
 }
 
-// Helper to load file contents asynchronously
 function loadFileContentsAsync(file: Gio.File): Promise<[boolean, Uint8Array, string]> {
   return new Promise((resolve, reject) => {
     file.load_contents_async(null, (_f, res) => {
@@ -60,7 +57,6 @@ function loadFileContentsAsync(file: Gio.File): Promise<[boolean, Uint8Array, st
   });
 }
 
-// Helper to create an empty file asynchronously
 function createFileAsync(file: Gio.File): Promise<void> {
   return new Promise((resolve, reject) => {
     file.create_async(Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null, (_f, res) => {
@@ -75,7 +71,6 @@ function createFileAsync(file: Gio.File): Promise<void> {
   });
 }
 
-// Helper to log errors without breaking the ungated console logging rule
 function logError(msg: string, err?: any): void {
   console.error(msg, err);
 }
