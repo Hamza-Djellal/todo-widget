@@ -20,6 +20,13 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
   async fillPreferencesWindow(window: Adw.PreferencesWindow): Promise<void> {
     this._settings = this.getSettings();
 
+    window.connect('close-request', () => {
+      this._settings = null as any;
+      this._bgColorRow = null as any;
+      this._borderColorRow = null as any;
+      this._textColorRow = null as any;
+    });
+
     const page = new Adw.PreferencesPage();
     window.add(page);
 
