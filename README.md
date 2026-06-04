@@ -1,6 +1,6 @@
 <p align="center">
-  <img src="https://img.shields.io/github/stars/Hamza-Djellal/todo-widget?style=flat">
-  <img src="https://img.shields.io/github/license/Hamza-Djellal/todo-widget?style=flat">
+  <img src="https://img.shields.io/github/stars/Hamza-Djellal/todo-widget?style=flat&v=3">
+  <img src="https://img.shields.io/github/license/Hamza-Djellal/todo-widget?style=flat&v=3">
   <img alt="GNOME Shell" src="https://img.shields.io/badge/GNOME_Shell-45%2B-4A86CF?logo=gnome&logoColor=white"/>
   <img src="https://img.shields.io/badge/status-active-success">
 </p>
