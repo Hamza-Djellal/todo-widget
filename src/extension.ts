@@ -78,10 +78,8 @@ function logError(msg: string, err?: any): void {
 const TodoWidget = GObject.registerClass(
   class TodoWidget extends St.BoxLayout {
     private _settings: any;
-    private _handlerIds: number[] = [];
     private _intervalId: number | null = null;
     private _fileMonitor: Gio.FileMonitor | null = null;
-    private _fileMonitorId: number | null = null;
     private _filePath: string = '';
 
     // Drag state
@@ -261,11 +259,10 @@ const TodoWidget = GObject.registerClass(
     }
 
     private _connectSettings(): void {
-      this._handlerIds.push(
-        this._settings.connect('changed::position-x', () => this._updatePosition()),
-      );
-      this._handlerIds.push(
-        this._settings.connect('changed::position-y', () => this._updatePosition()),
+      this._settings.connectObject(
+        'changed::position-x', () => this._updatePosition(),
+        'changed::position-y', () => this._updatePosition(),
+        this
       );
 
       const styleKeys = [
@@ -279,43 +276,30 @@ const TodoWidget = GObject.registerClass(
         'label-font-size',
       ];
       styleKeys.forEach((key) => {
-        this._handlerIds.push(
-          this._settings.connect(`changed::${key}`, () => {
-            this._updateContainerStyle();
-            this._updateTodoList();
-          }),
-        );
+        this._settings.connectObject(`changed::${key}`, () => {
+          this._updateContainerStyle();
+          this._updateTodoList();
+        }, this);
       });
 
-      this._handlerIds.push(
-        this._settings.connect('changed::todo-file-path', () => {
+      this._settings.connectObject(
+        'changed::todo-file-path', () => {
           this._updateFilePath();
           this._updateTodoList();
-        }),
-      );
-
-      this._handlerIds.push(
-        this._settings.connect('changed::update-interval', () => {
+        },
+        'changed::update-interval', () => {
           this._startUpdates();
-        }),
-      );
-
-      this._handlerIds.push(
-        this._settings.connect('changed::show-completed', () => {
+        },
+        'changed::show-completed', () => {
           this._updateTodoList();
-        }),
-      );
-
-      this._handlerIds.push(
-        this._settings.connect('changed::completed-behavior', () => {
+        },
+        'changed::completed-behavior', () => {
           this._updateTodoList();
-        }),
-      );
-
-      this._handlerIds.push(
-        this._settings.connect('changed::lock-position', () => {
+        },
+        'changed::lock-position', () => {
           this._updateLockIcon();
-        }),
+        },
+        this
       );
     }
 
@@ -394,10 +378,7 @@ const TodoWidget = GObject.registerClass(
 
       // Reset file monitor
       if (this._fileMonitor) {
-        if (this._fileMonitorId !== null) {
-          this._fileMonitor.disconnect(this._fileMonitorId);
-          this._fileMonitorId = null;
-        }
+        (this._fileMonitor as any).disconnectObject(this);
         this._fileMonitor.cancel();
         this._fileMonitor = null;
       }
@@ -442,21 +423,18 @@ const TodoWidget = GObject.registerClass(
 
     private _setupFileMonitor(file: Gio.File): void {
       if (this._fileMonitor) {
-        if (this._fileMonitorId !== null) {
-          this._fileMonitor.disconnect(this._fileMonitorId);
-          this._fileMonitorId = null;
-        }
+        (this._fileMonitor as any).disconnectObject(this);
         this._fileMonitor.cancel();
       }
       this._fileMonitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
-      this._fileMonitorId = this._fileMonitor.connect('changed', (mon, f, otherF, eventType) => {
+      (this._fileMonitor as any).connectObject('changed', (mon: any, f: any, otherF: any, eventType: any) => {
         if (
           eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
           eventType === Gio.FileMonitorEvent.CREATED
         ) {
           this._updateTodoList();
         }
-      });
+      }, this);
     }
 
     private async _updateTodoList(): Promise<void> {
@@ -839,15 +817,11 @@ const TodoWidget = GObject.registerClass(
     destroy(): void {
       this._clearTimer();
       if (this._fileMonitor) {
-        if (this._fileMonitorId !== null) {
-          this._fileMonitor.disconnect(this._fileMonitorId);
-          this._fileMonitorId = null;
-        }
+        (this._fileMonitor as any).disconnectObject(this);
         this._fileMonitor.cancel();
         this._fileMonitor = null;
       }
-      this._handlerIds.forEach((id) => this._settings.disconnect(id));
-      this._handlerIds = [];
+      this._settings.disconnectObject(this);
       this.destroy_all_children();
       super.destroy();
     }
