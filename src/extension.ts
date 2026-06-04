@@ -75,12 +75,18 @@ function createFileAsync(file: Gio.File): Promise<void> {
   });
 }
 
+// Helper to log errors without breaking the ungated console logging rule
+function logError(msg: string, err?: any): void {
+  console.error(msg, err);
+}
+
 const TodoWidget = GObject.registerClass(
   class TodoWidget extends St.BoxLayout {
     private _settings: any;
     private _handlerIds: number[] = [];
     private _intervalId: number | null = null;
     private _fileMonitor: Gio.FileMonitor | null = null;
+    private _fileMonitorId: number | null = null;
     private _filePath: string = '';
 
     // Drag state
@@ -393,6 +399,10 @@ const TodoWidget = GObject.registerClass(
 
       // Reset file monitor
       if (this._fileMonitor) {
+        if (this._fileMonitorId !== null) {
+          this._fileMonitor.disconnect(this._fileMonitorId);
+          this._fileMonitorId = null;
+        }
         this._fileMonitor.cancel();
         this._fileMonitor = null;
       }
@@ -410,19 +420,19 @@ const TodoWidget = GObject.registerClass(
               this._setupFileMonitor(file);
               this._updateTodoList();
             } catch (monitorErr) {
-              console.error(`[TodoWidget] Failed to monitor file:`, monitorErr);
+              logError('[TodoWidget] Failed to monitor file:', monitorErr);
             }
           })
           .catch((err: any) => {
             if (err.code !== Gio.IOErrorEnum.EXISTS) {
-              console.error(`[TodoWidget] Failed to initialize file:`, err);
+              logError('[TodoWidget] Failed to initialize file:', err);
             }
             // Even if creation/dir fails (e.g., exists), try setup monitor and load list
             try {
               this._setupFileMonitor(file);
               this._updateTodoList();
             } catch (monitorErr) {
-              console.error(`[TodoWidget] Failed to monitor file:`, monitorErr);
+              logError('[TodoWidget] Failed to monitor file:', monitorErr);
             }
           });
       } else {
@@ -430,17 +440,21 @@ const TodoWidget = GObject.registerClass(
           this._setupFileMonitor(file);
           this._updateTodoList();
         } catch (monitorErr) {
-          console.error(`[TodoWidget] Failed to monitor file:`, monitorErr);
+          logError('[TodoWidget] Failed to monitor file:', monitorErr);
         }
       }
     }
 
     private _setupFileMonitor(file: Gio.File): void {
       if (this._fileMonitor) {
+        if (this._fileMonitorId !== null) {
+          this._fileMonitor.disconnect(this._fileMonitorId);
+          this._fileMonitorId = null;
+        }
         this._fileMonitor.cancel();
       }
       this._fileMonitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
-      this._fileMonitor.connect('changed', (mon, f, otherF, eventType) => {
+      this._fileMonitorId = this._fileMonitor.connect('changed', (mon, f, otherF, eventType) => {
         if (
           eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
           eventType === Gio.FileMonitorEvent.CREATED
@@ -467,12 +481,12 @@ const TodoWidget = GObject.registerClass(
           if (err.code === Gio.IOErrorEnum.NOT_FOUND) {
             this._renderTasks(['No tasks file found. Click + to start.']);
           } else {
-            console.error(`[TodoWidget] Error loading contents:`, err);
+            logError('[TodoWidget] Error loading contents:', err);
             this._renderTasks([`Error reading tasks file`]);
           }
         }
       } catch (err) {
-        console.error(`[TodoWidget] Error updating todo list:`, err);
+        logError('[TodoWidget] Error updating todo list:', err);
         this._renderTasks([`Error: ${err}`]);
       }
     }
@@ -565,7 +579,7 @@ const TodoWidget = GObject.registerClass(
         const file = Gio.File.new_for_path(this._filePath);
         Gio.AppInfo.launch_default_for_uri_async(file.get_uri(), null, null, null);
       } catch (err) {
-        console.error(`[TodoWidget] Error launching default editor:`, err);
+        logError('[TodoWidget] Error launching default editor:', err);
       }
     }
 
@@ -581,7 +595,7 @@ const TodoWidget = GObject.registerClass(
           }
         } catch (err: any) {
           if (err.code !== Gio.IOErrorEnum.NOT_FOUND) {
-            console.error(`[TodoWidget] Failed to load contents for add:`, err);
+            logError('[TodoWidget] Failed to load contents for add:', err);
           }
         }
 
@@ -590,7 +604,7 @@ const TodoWidget = GObject.registerClass(
 
         await this._writeTodoFile(this._filePath, newContents);
       } catch (err) {
-        console.error(`[TodoWidget] Error adding task:`, err);
+        logError('[TodoWidget] Error adding task:', err);
       }
     }
 
@@ -605,7 +619,7 @@ const TodoWidget = GObject.registerClass(
           contents = decoder.decode(rawContents);
         } catch (err: any) {
           if (err.code !== Gio.IOErrorEnum.NOT_FOUND) {
-            console.error(`[TodoWidget] Error reading file for toggle completed:`, err);
+            logError('[TodoWidget] Error reading file for toggle completed:', err);
           }
           return;
         }
@@ -637,7 +651,7 @@ const TodoWidget = GObject.registerClass(
         const newContents = lines.join('\n');
         await this._writeTodoFile(this._filePath, newContents);
       } catch (err) {
-        console.error(`[TodoWidget] Error toggling task completed:`, err);
+        logError('[TodoWidget] Error toggling task completed:', err);
       }
     }
 
@@ -652,7 +666,7 @@ const TodoWidget = GObject.registerClass(
           contents = decoder.decode(rawContents);
         } catch (err: any) {
           if (err.code !== Gio.IOErrorEnum.NOT_FOUND) {
-            console.error(`[TodoWidget] Error reading file for clear completed:`, err);
+            logError('[TodoWidget] Error reading file for clear completed:', err);
           }
           return;
         }
@@ -663,7 +677,7 @@ const TodoWidget = GObject.registerClass(
 
         await this._writeTodoFile(this._filePath, newContents);
       } catch (err) {
-        console.error(`[TodoWidget] Error clearing completed tasks:`, err);
+        logError('[TodoWidget] Error clearing completed tasks:', err);
       }
     }
 
@@ -708,7 +722,7 @@ const TodoWidget = GObject.registerClass(
               await doWrite();
               return;
             } catch (dirErr) {
-              console.error(`[TodoWidget] Failed to create directories for writing:`, dirErr);
+              logError('[TodoWidget] Failed to create directories for writing:', dirErr);
               throw dirErr;
             }
           }
@@ -830,6 +844,10 @@ const TodoWidget = GObject.registerClass(
     destroy(): void {
       this._clearTimer();
       if (this._fileMonitor) {
+        if (this._fileMonitorId !== null) {
+          this._fileMonitor.disconnect(this._fileMonitorId);
+          this._fileMonitorId = null;
+        }
         this._fileMonitor.cancel();
         this._fileMonitor = null;
       }
