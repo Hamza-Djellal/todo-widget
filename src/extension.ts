@@ -6,6 +6,75 @@ import Clutter from 'gi://Clutter';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
+// Helper function to create a directory asynchronously
+function makeDirectoryAsync(file: Gio.File): Promise<void> {
+  return new Promise((resolve, reject) => {
+    file.make_directory_async(GLib.PRIORITY_DEFAULT, null, (_f, res) => {
+      try {
+        file.make_directory_finish(res);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+}
+
+// Helper function to create directories recursively asynchronously
+async function makeDirectoryWithParentsAsync(file: Gio.File): Promise<void> {
+  try {
+    await makeDirectoryAsync(file);
+  } catch (err: any) {
+    if (err.code === Gio.IOErrorEnum.EXISTS) {
+      return;
+    }
+    if (err.code === Gio.IOErrorEnum.NOT_FOUND) {
+      const parent = file.get_parent();
+      if (!parent) {
+        throw err;
+      }
+      await makeDirectoryWithParentsAsync(parent);
+      try {
+        await makeDirectoryAsync(file);
+      } catch (err2: any) {
+        if ((err2 as any).code !== Gio.IOErrorEnum.EXISTS) {
+          throw err2;
+        }
+      }
+      return;
+    }
+    throw err;
+  }
+}
+
+// Helper to load file contents asynchronously
+function loadFileContentsAsync(file: Gio.File): Promise<[boolean, Uint8Array, string]> {
+  return new Promise((resolve, reject) => {
+    file.load_contents_async(null, (_f, res) => {
+      try {
+        resolve(file.load_contents_finish(res));
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+}
+
+// Helper to create an empty file asynchronously
+function createFileAsync(file: Gio.File): Promise<void> {
+  return new Promise((resolve, reject) => {
+    file.create_async(Gio.FileCreateFlags.NONE, GLib.PRIORITY_DEFAULT, null, (_f, res) => {
+      try {
+        const stream = file.create_finish(res);
+        stream.close(null);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+}
+
 const TodoWidget = GObject.registerClass(
   class TodoWidget extends St.BoxLayout {
     private _settings: any;
@@ -328,58 +397,80 @@ const TodoWidget = GObject.registerClass(
         this._fileMonitor = null;
       }
 
-      try {
-        const file = Gio.File.new_for_path(this._filePath);
-        // Ensure file exists
-        if (!file.query_exists(null)) {
-          const parent = file.get_parent();
-          if (parent && !parent.query_exists(null)) {
-            parent.make_directory_with_parents(null);
-          }
-          file.create(Gio.FileCreateFlags.NONE, null);
-        }
+      const file = Gio.File.new_for_path(this._filePath);
+      const parent = file.get_parent();
 
-        this._fileMonitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
-        this._fileMonitor.connect('changed', (mon, f, otherF, eventType) => {
-          if (
-            eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
-            eventType === Gio.FileMonitorEvent.CREATED
-          ) {
-            this._updateTodoList();
-          }
-        });
-      } catch (err) {
-        console.error(`[TodoWidget] Error setting up file monitor for ${this._filePath}:`, err);
+      if (parent) {
+        makeDirectoryWithParentsAsync(parent)
+          .then(() => {
+            return createFileAsync(file);
+          })
+          .then(() => {
+            try {
+              this._setupFileMonitor(file);
+              this._updateTodoList();
+            } catch (monitorErr) {
+              console.error(`[TodoWidget] Failed to monitor file:`, monitorErr);
+            }
+          })
+          .catch((err: any) => {
+            if (err.code !== Gio.IOErrorEnum.EXISTS) {
+              console.error(`[TodoWidget] Failed to initialize file:`, err);
+            }
+            // Even if creation/dir fails (e.g., exists), try setup monitor and load list
+            try {
+              this._setupFileMonitor(file);
+              this._updateTodoList();
+            } catch (monitorErr) {
+              console.error(`[TodoWidget] Failed to monitor file:`, monitorErr);
+            }
+          });
+      } else {
+        try {
+          this._setupFileMonitor(file);
+          this._updateTodoList();
+        } catch (monitorErr) {
+          console.error(`[TodoWidget] Failed to monitor file:`, monitorErr);
+        }
       }
+    }
+
+    private _setupFileMonitor(file: Gio.File): void {
+      if (this._fileMonitor) {
+        this._fileMonitor.cancel();
+      }
+      this._fileMonitor = file.monitor_file(Gio.FileMonitorFlags.NONE, null);
+      this._fileMonitor.connect('changed', (mon, f, otherF, eventType) => {
+        if (
+          eventType === Gio.FileMonitorEvent.CHANGES_DONE_HINT ||
+          eventType === Gio.FileMonitorEvent.CREATED
+        ) {
+          this._updateTodoList();
+        }
+      });
     }
 
     private async _updateTodoList(): Promise<void> {
       try {
         const file = Gio.File.new_for_path(this._filePath);
-        if (!file.query_exists(null)) {
-          this._renderTasks(['No tasks file found. Click + to start.']);
-          return;
+        try {
+          const [success, contents] = await loadFileContentsAsync(file);
+          if (success) {
+            const decoder = new TextDecoder('utf-8');
+            const text = decoder.decode(contents);
+            const lines = text.split('\n').filter((line) => line.trim().length > 0);
+            this._renderTasks(lines);
+          } else {
+            this._renderTasks(['Failed to read tasks file.']);
+          }
+        } catch (err: any) {
+          if (err.code === Gio.IOErrorEnum.NOT_FOUND) {
+            this._renderTasks(['No tasks file found. Click + to start.']);
+          } else {
+            console.error(`[TodoWidget] Error loading contents:`, err);
+            this._renderTasks([`Error reading tasks file`]);
+          }
         }
-
-        return new Promise((resolve) => {
-          file.load_contents_async(null, (_file, res) => {
-            try {
-              const [success, contents] = file.load_contents_finish(res);
-              if (success) {
-                const decoder = new TextDecoder('utf-8');
-                const text = decoder.decode(contents);
-                const lines = text.split('\n').filter((line) => line.trim().length > 0);
-                this._renderTasks(lines);
-              } else {
-                this._renderTasks(['Failed to read tasks file.']);
-              }
-            } catch (err) {
-              console.error(`[TodoWidget] Error finished loading contents:`, err);
-              this._renderTasks([`Error reading tasks file`]);
-            }
-            resolve();
-          });
-        });
       } catch (err) {
         console.error(`[TodoWidget] Error updating todo list:`, err);
         this._renderTasks([`Error: ${err}`]);
@@ -482,11 +573,15 @@ const TodoWidget = GObject.registerClass(
       try {
         const file = Gio.File.new_for_path(this._filePath);
         let contents = '';
-        if (file.query_exists(null)) {
-          const [success, rawContents] = file.load_contents(null);
+        try {
+          const [success, rawContents] = await loadFileContentsAsync(file);
           if (success) {
             const decoder = new TextDecoder('utf-8');
             contents = decoder.decode(rawContents);
+          }
+        } catch (err: any) {
+          if (err.code !== Gio.IOErrorEnum.NOT_FOUND) {
+            console.error(`[TodoWidget] Failed to load contents for add:`, err);
           }
         }
 
@@ -502,14 +597,20 @@ const TodoWidget = GObject.registerClass(
     private async _toggleTaskCompleted(index: number): Promise<void> {
       try {
         const file = Gio.File.new_for_path(this._filePath);
-        if (!file.query_exists(null)) return;
+        let contents = '';
+        try {
+          const [success, rawContents] = await loadFileContentsAsync(file);
+          if (!success) return;
+          const decoder = new TextDecoder('utf-8');
+          contents = decoder.decode(rawContents);
+        } catch (err: any) {
+          if (err.code !== Gio.IOErrorEnum.NOT_FOUND) {
+            console.error(`[TodoWidget] Error reading file for toggle completed:`, err);
+          }
+          return;
+        }
 
-        const [success, rawContents] = file.load_contents(null);
-        if (!success) return;
-
-        const decoder = new TextDecoder('utf-8');
-        const text = decoder.decode(rawContents);
-        const lines = text.split('\n');
+        const lines = contents.split('\n');
 
         let taskIndex = 0;
         for (let i = 0; i < lines.length; i++) {
@@ -543,15 +644,20 @@ const TodoWidget = GObject.registerClass(
     private async _clearCompletedTasks(): Promise<void> {
       try {
         const file = Gio.File.new_for_path(this._filePath);
-        if (!file.query_exists(null)) return;
+        let contents = '';
+        try {
+          const [success, rawContents] = await loadFileContentsAsync(file);
+          if (!success) return;
+          const decoder = new TextDecoder('utf-8');
+          contents = decoder.decode(rawContents);
+        } catch (err: any) {
+          if (err.code !== Gio.IOErrorEnum.NOT_FOUND) {
+            console.error(`[TodoWidget] Error reading file for clear completed:`, err);
+          }
+          return;
+        }
 
-        const [success, rawContents] = file.load_contents(null);
-        if (!success) return;
-
-        const decoder = new TextDecoder('utf-8');
-        const text = decoder.decode(rawContents);
-        const lines = text.split('\n');
-
+        const lines = contents.split('\n');
         const newLines = lines.filter((line) => !line.trim().startsWith('x '));
         const newContents = newLines.join('\n');
 
@@ -567,27 +673,48 @@ const TodoWidget = GObject.registerClass(
       const bytes = encoder.encode(content);
       const gbytes = GLib.Bytes.new(bytes);
 
-      return new Promise((resolve, reject) => {
-        file.replace_contents_bytes_async(
-          gbytes,
-          null,
-          false,
-          Gio.FileCreateFlags.REPLACE_DESTINATION,
-          null,
-          (_file, res) => {
-            try {
-              const [success] = file.replace_contents_finish(res);
-              if (success) {
-                resolve();
-              } else {
-                reject(new Error('Failed to write contents'));
+      const doWrite = () => {
+        return new Promise<void>((resolve, reject) => {
+          file.replace_contents_bytes_async(
+            gbytes,
+            null,
+            false,
+            Gio.FileCreateFlags.REPLACE_DESTINATION,
+            null,
+            (_file, res) => {
+              try {
+                const [success] = file.replace_contents_finish(res);
+                if (success) {
+                  resolve();
+                } else {
+                  reject(new Error('Failed to write contents'));
+                }
+              } catch (e) {
+                reject(e);
               }
-            } catch (e) {
-              reject(e);
+            },
+          );
+        });
+      };
+
+      try {
+        await doWrite();
+      } catch (err: any) {
+        if (err.code === Gio.IOErrorEnum.NOT_FOUND) {
+          const parent = file.get_parent();
+          if (parent) {
+            try {
+              await makeDirectoryWithParentsAsync(parent);
+              await doWrite();
+              return;
+            } catch (dirErr) {
+              console.error(`[TodoWidget] Failed to create directories for writing:`, dirErr);
+              throw dirErr;
             }
-          },
-        );
-      });
+          }
+        }
+        throw err;
+      }
     }
 
     private _isInteractive(actor: any): boolean {
@@ -649,17 +776,6 @@ const TodoWidget = GObject.registerClass(
 
       // Find the clicked actor under the cursor using global stage picking
       let actor: any = global.stage.get_actor_at_pos(Clutter.PickMode.REACTIVE, x, y);
-
-      // Debug log what actor was clicked
-      if (actor) {
-        let name = 'Unknown';
-        try {
-          name = GObject.type_name(actor.constructor as any) || 'Unknown';
-        } catch (e) {
-          name = actor.constructor.name;
-        }
-        console.log(`[TodoWidget] Clicked reactive actor: ${name}`);
-      }
 
       // Bypass dragging if clicking interactive controls
       while (actor && actor !== this) {
