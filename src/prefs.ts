@@ -1,6 +1,7 @@
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
+import GLib from 'gi://GLib';
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 const THEMES = {
@@ -131,7 +132,7 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
     behaviorGroup.add(completedBehaviorRow);
 
     // File path and interval
-    behaviorGroup.add(this._createStringRow('todo-file-path', 'Todo File Path', 'Path to your tasks file'));
+    behaviorGroup.add(this._createFilePathRow(window, 'todo-file-path', 'Todo File Path'));
     behaviorGroup.add(this._createSpinRow('update-interval', 'Fallback Update Interval', 'Refresh time in milliseconds (0 to disable)', 0, 3600000, 1000));
 
     // Fine-tuned manual position adjustment
@@ -198,15 +199,69 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
     return row;
   }
 
-  private _createStringRow(key: string, title: string, subtitle: string): Adw.EntryRow {
+  private _createFilePathRow(window: Adw.PreferencesWindow, key: string, title: string): Adw.EntryRow {
     const row = new Adw.EntryRow({
       title,
       text: this._settings.get_string(key),
     });
 
-    row.connect('changed', () => {
+    row.connect('apply', () => {
       this._settings.set_string(key, row.text);
     });
+
+    const focusController = new Gtk.EventControllerFocus();
+    focusController.connect('leave', () => {
+      this._settings.set_string(key, row.text);
+    });
+    row.add_controller(focusController);
+
+    const fileButton = new Gtk.Button({
+      icon_name: 'folder-open-symbolic',
+      tooltip_text: 'Choose Todo File',
+      valign: Gtk.Align.CENTER,
+    });
+
+    fileButton.connect('clicked', () => {
+      const native = new Gtk.FileChooserNative({
+        title: 'Select Todo File',
+        transient_for: window,
+        action: Gtk.FileChooserAction.OPEN,
+        accept_label: '_Open',
+        cancel_label: '_Cancel',
+      });
+
+      const filter = new Gtk.FileFilter();
+      filter.set_name('Text files (*.txt)');
+      filter.add_pattern('*.txt');
+      native.add_filter(filter);
+
+      const allFilter = new Gtk.FileFilter();
+      allFilter.set_name('All files');
+      allFilter.add_pattern('*');
+      native.add_filter(allFilter);
+
+      native.connect('response', (dialog, response_id) => {
+        if (response_id === Gtk.ResponseType.ACCEPT) {
+          const file = dialog.get_file();
+          if (file) {
+            let path = file.get_path();
+            if (path) {
+              const homeDir = GLib.get_home_dir();
+              if (path.startsWith(homeDir)) {
+                path = '~' + path.slice(homeDir.length);
+              }
+              row.text = path;
+              this._settings.set_string(key, path);
+            }
+          }
+        }
+        dialog.destroy();
+      });
+
+      native.show();
+    });
+
+    row.add_suffix(fileButton);
 
     return row;
   }
