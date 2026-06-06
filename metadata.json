@@ -1,0 +1,8 @@
+{
+  "uuid": "todoWidget@openclaw.local",
+  "name": "Todo Widget",
+  "description": "A minimal desktop widget to display tasks from a plain text file.",
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "version": 1,
+  "settings-schema": "org.gnome.shell.extensions.todowidget"
+}

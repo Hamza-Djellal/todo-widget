@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.todowidget" path="/org/gnome/shell/extensions/todowidget/">
+    <key name="theme" type="s"><default>'dark'</default></key>
+    <key name="position-x" type="d"><default>5</default></key>
+    <key name="position-y" type="d"><default>88</default></key>
+
+    <key name="background-color" type="s"><default>'rgba(0, 0, 0, 0.8)'</default></key>
+    <key name="border-color" type="s"><default>'rgba(255, 255, 255, 0.2)'</default></key>
+    <key name="text-color" type="s"><default>'rgba(255, 255, 255, 0.9)'</default></key>
+    <key name="border-radius" type="i"><default>12</default></key>
+    <key name="padding-horizontal" type="i"><default>16</default></key>
+    <key name="padding-vertical" type="i"><default>12</default></key>
+
+    <key name="label-font-size" type="i">
+      <default>14</default>
+      <summary>Font size of the labels in pixels</summary>
+    </key>
+    <key name="todo-file-path" type="s"><default>'~/todo.txt'</default></key>
+    <key name="update-interval" type="i"><default>5000</default></key>
+    
+    <key name="extension-path" type="s"><default>''</default></key>
+  </schema>
+</schemalist>
