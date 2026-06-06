@@ -3,7 +3,7 @@
   "name": "Todo Widget",
   "description": "A minimal desktop widget to display tasks from a plain text file.",
   "shell-version": ["45", "46", "47", "48", "49", "50"],
-  "version": 2,
+  "version": 3,
   "settings-schema": "org.gnome.shell.extensions.todowidget",
   "url": "https://github.com/Hamza-Djellal/todo-widget"
 }
