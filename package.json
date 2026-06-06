@@ -1,6 +1,6 @@
 {
   "name": "gnome-all-in-one-extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vitals, Tiling, and Dash extension",
   "type": "module",
   "scripts": {
