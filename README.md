@@ -69,3 +69,9 @@ To build the extension archive (`extension.zip`) for manual installation or uplo
 ```bash
 npm run zip
 ```
+
+---
+
+## Credits & Acknowledgements
+
+This project was inspired by and originally adapted from the [vitals-widget](https://github.com/austinemk/vitals-widget) GNOME Shell extension by [ctrln3rd (Austine)](https://github.com/austinemk) and contributors. We thank them for their work, which helped establish the baseline structure for this extension.
