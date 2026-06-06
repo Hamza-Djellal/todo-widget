@@ -238,9 +238,10 @@ const TodoWidget = GObject.registerClass(
 
       this._addEntry.clutter_text.connect('activate', () => {
         const text = this._addEntry.get_text().trim();
-        if (text) {
+        if (text.length >= 1) {
           this._addTask(text);
           this._addEntry.set_text('');
+        } else {
           this._toggleAddBox();
         }
       });
