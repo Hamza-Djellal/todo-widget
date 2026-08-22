@@ -114,7 +114,11 @@
 
 /* Body container with two columns */
 .todo-body {
-    spacing: 12px;
+    spacing: 8px;
+}
+
+.todo-body.icon-mode {
+    spacing: 4px;
 }
 
 /* Sidebar for projects */
@@ -126,16 +130,26 @@
 
 /* Compact icon-only sidebar */
 .todo-sidebar.icon-mode {
-    min-width: 32px;
-    max-width: 40px;
+    width: 30px;
+    min-width: 30px;
+    max-width: 30px;
+    spacing: 2px;
+    margin: 0;
+    padding: 0;
+}
+
+.todo-sidebar.icon-mode .todo-projects-list {
+    spacing: 2px;
 }
 
 .todo-sidebar.icon-mode .todo-project-button {
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
     padding: 0;
-    margin: 1px 0;
-    border-radius: 8px;
+    margin: 0;
+    border-radius: 6px;
 }
 
 .todo-sidebar.icon-mode .todo-project-row {

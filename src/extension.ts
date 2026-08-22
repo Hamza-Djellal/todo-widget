@@ -785,10 +785,16 @@ const TodoWidget = GObject.registerClass(
       const isIconMode = projectsMode === 'icon';
       if (isIconMode) {
         this._sidebarBox.add_style_class_name('icon-mode');
+        this._bodyBox.add_style_class_name('icon-mode');
         if (this._sidebarTitle) this._sidebarTitle.visible = false;
+        this._sidebarBox.set_style('width: 30px; min-width: 30px; max-width: 30px;');
+        this._projectsScrollView.set_style('width: 30px; max-height: 300px;');
       } else {
         this._sidebarBox.remove_style_class_name('icon-mode');
+        this._bodyBox.remove_style_class_name('icon-mode');
         if (this._sidebarTitle) this._sidebarTitle.visible = true;
+        this._sidebarBox.set_style('');
+        this._projectsScrollView.set_style('max-height: 300px;');
       }
 
       const showIcons = projectsMode === 'icon' || projectsMode === 'both';
