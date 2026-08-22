@@ -327,10 +327,10 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
       const [success, contents] = file.load_contents(null);
       if (success) {
         const text = new TextDecoder('utf-8').decode(contents);
-        const matches = text.match(/(?:^|\s)\+([A-Za-z0-9_\-]+)/g);
+        const matches = text.match(/(?:^|\s)[#+]([A-Za-z0-9_\-]+)/g);
         if (matches) {
           matches.forEach((m) => {
-            const p = m.trim().replace(/^\+/, '');
+            const p = m.trim().replace(/^[#+]/, '');
             if (p && !projectsList.includes(p)) {
               projectsList.push(p);
             }

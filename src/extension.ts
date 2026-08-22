@@ -215,10 +215,10 @@ function parseTodoTasks(lines: string[], stripProjectTags: boolean = true): Todo
     const isCompleted = trimmed.startsWith('x ');
     const rawTaskText = isCompleted ? trimmed.slice(2).trim() : trimmed;
 
-    // Extract true +Project tags (e.g. +Work, +Project_1)
-    // Avoid escaped /+Tag or \+Tag and avoid + followed by space (e.g. 2 + 3)
+    // Extract true project tags matching both #Project and +Project
+    // Avoid escaped /#Tag, \+Tag, etc. and avoid standalone # or + (e.g. 2 + 3, #1)
     const projects: string[] = [];
-    const projectRegex = /(?:^|\s)(?<![\\/])\+([A-Za-z0-9_\-]+)/g;
+    const projectRegex = /(?:^|\s)(?<![\\/])[#+]([A-Za-z0-9_\-]+)/g;
     let match;
     while ((match = projectRegex.exec(rawTaskText)) !== null) {
       const proj = match[1];
@@ -229,11 +229,11 @@ function parseTodoTasks(lines: string[], stripProjectTags: boolean = true): Todo
 
     let displayText = rawTaskText;
     if (stripProjectTags) {
-      // Remove true project tags from the display text
-      displayText = displayText.replace(/(^|\s)(?<![\\/])\+([A-Za-z0-9_\-]+)/g, '$1');
+      // Remove true project tags (#Project and +Project) from the display text
+      displayText = displayText.replace(/(^|\s)(?<![\\/])[#+]([A-Za-z0-9_\-]+)/g, '$1');
     }
-    // Unescape any /\+ or \+ to literal +
-    displayText = displayText.replace(/(^|\s)[\\/]\+([A-Za-z0-9_\-]+)/g, '$1+$2');
+    // Unescape any /\# or \+ to literal # or +
+    displayText = displayText.replace(/(^|\s)[\\/]([#+])([A-Za-z0-9_\-]+)/g, '$1$2$3');
     displayText = displayText.replace(/\s+/g, ' ').trim();
 
     tasks.push({
@@ -1037,9 +1037,9 @@ const TodoWidget = GObject.registerClass(
         if (
           this._selectedProject !== '__all__' &&
           this._selectedProject !== '__inbox__' &&
-          !taskToAdd.match(/(?:^|\s)\+\S+/)
+          !taskToAdd.match(/(?:^|\s)[#+]\S+/)
         ) {
-          taskToAdd += ` +${this._selectedProject}`;
+          taskToAdd += ` #${this._selectedProject}`;
         }
 
         const separator = contents.endsWith('\n') || contents === '' ? '' : '\n';
@@ -1123,8 +1123,10 @@ const TodoWidget = GObject.registerClass(
           if (this._selectedProject === '__all__') {
             return false;
           }
-          const projectMatches = trimmed.match(/(?:^|\s)\+([A-Za-z0-9_\-]+)/g);
-          const projects = projectMatches ? projectMatches.map((m) => m.trim().replace(/^\+/, '')) : [];
+          const projectMatches = trimmed.match(/(?:^|\s)[#+]([A-Za-z0-9_\-]+)/g);
+          const projects = projectMatches
+            ? projectMatches.map((m) => m.trim().replace(/^[#+]/, ''))
+            : [];
           if (this._selectedProject === '__inbox__') {
             return projects.length > 0;
           }
