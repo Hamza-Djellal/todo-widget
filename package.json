@@ -11,7 +11,8 @@
     "copy-assets": "cp metadata.json stylesheet.css dist/ && cp -r schemas dist/ 2>/dev/null || :",
     "build": "npm run clean && npm run compile && npm run copy-assets && npm run format && npm run add-spacing",
     "install-local": "npm run build && ./install.sh",
-    "zip": "npm run build && rm -f extension.zip && cd dist && zip -r ../extension.zip . -x \"schemas/gschemas.compiled\""
+    "zip": "npm run build && rm -f extension.zip && cd dist && zip -r ../extension.zip . -x \"schemas/gschemas.compiled\"",
+    "shexli": "shexli extension.zip 2>/dev/null || ../.venv/bin/shexli extension.zip"
   },
   "devDependencies": {
     "@girs/adw-1": "^1.9.0-4.0.0-beta.38",
