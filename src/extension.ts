@@ -580,6 +580,7 @@ const TodoWidget = GObject.registerClass(
       let inlineStyle = `
         border-radius: ${borderRadius}px;
         padding: ${padV}px ${padH}px;
+        min-width: 270px;
       `;
 
       if (theme !== 'system') {
