@@ -8,6 +8,7 @@
     <key name="background-color" type="s"><default>'rgba(0, 0, 0, 0.8)'</default></key>
     <key name="border-color" type="s"><default>'rgba(255, 255, 255, 0.2)'</default></key>
     <key name="text-color" type="s"><default>'rgba(255, 255, 255, 0.9)'</default></key>
+    <key name="header-color" type="s"><default>'rgba(255, 255, 255, 0.9)'</default></key>
     <key name="border-radius" type="i"><default>12</default></key>
     <key name="padding-horizontal" type="i"><default>16</default></key>
     <key name="padding-vertical" type="i"><default>12</default></key>
@@ -22,6 +23,8 @@
     <key name="lock-position" type="b"><default>false</default></key>
     <key name="completed-behavior" type="s"><default>'cross'</default></key>
     <key name="show-completed" type="b"><default>true</default></key>
+    <key name="projects-mode" type="s"><default>'icon'</default></key>
+    <key name="custom-project-icons" type="s"><default>'{}'</default></key>
     
     <key name="extension-path" type="s"><default>''</default></key>
   </schema>

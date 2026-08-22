@@ -111,3 +111,106 @@
     border-color: #3584e4;
     box-shadow: inset 0 0 0 1px #3584e4;
 }
+
+/* Body container with two columns */
+.todo-body {
+    spacing: 12px;
+}
+
+/* Sidebar for projects */
+.todo-sidebar {
+    min-width: 110px;
+    max-width: 150px;
+    spacing: 6px;
+}
+
+/* Compact icon-only sidebar */
+.todo-sidebar.icon-mode {
+    min-width: 32px;
+    max-width: 40px;
+}
+
+.todo-sidebar.icon-mode .todo-project-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin: 1px 0;
+    border-radius: 8px;
+}
+
+.todo-sidebar.icon-mode .todo-project-row {
+    spacing: 0;
+}
+
+/* Sidebar title */
+.todo-sidebar-title {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.6;
+    letter-spacing: 0.5px;
+    padding-left: 4px;
+    margin-bottom: 2px;
+}
+
+/* Projects list container */
+.todo-projects-list {
+    spacing: 3px;
+}
+
+/* Single project item button */
+.todo-project-button {
+    background-color: transparent;
+    border-radius: 6px;
+    padding: 4px 8px;
+    border: none;
+}
+
+.todo-project-row {
+    spacing: 6px;
+}
+
+.todo-project-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.todo-widget-container.light .todo-project-button:hover {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.todo-project-button.active {
+    background-color: rgba(255, 255, 255, 0.16);
+    font-weight: bold;
+}
+
+.todo-widget-container.light .todo-project-button.active {
+    background-color: rgba(0, 0, 0, 0.12);
+}
+
+/* Project button label */
+.todo-project-label {
+    font-size: 12px;
+}
+
+/* Project task count badge */
+.todo-project-count {
+    font-size: 11px;
+    opacity: 0.55;
+    margin-left: 4px;
+}
+
+/* Vertical separator between sidebar and tasks */
+.todo-sidebar-separator {
+    width: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+    margin: 0 2px;
+}
+
+.todo-widget-container.light .todo-sidebar-separator {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Main tasks content area */
+.todo-main-content {
+    min-width: 220px;
+    spacing: 6px;
+}
