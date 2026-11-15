@@ -24,7 +24,8 @@ A minimal, fully interactive desktop widget for GNOME Shell that displays and ma
 - 🛡️ **Desktop Position Locking**: Toggle widget movement locking directly via the lock button in the header to prevent accidental drags.
 - 📂 **Quick Editor Launcher**: Click the document icon to instantly open the todo file in your default system text editor.
 - 🗑️ **Completed Task Purging**: Clear all completed tasks (prefixed with `x`) with a single click.
-- 🎨 **GNOME 50 Glassmorphism**: High-fidelity, translucent glass styling options that blend seamlessly with Adwaita wallpapers.
+- 📌 **Always on Top Mode**: Option to keep the widget pinned above application windows, or place it on the desktop wallpaper layer (solves interactivity on Ubuntu/Wayland when Desktop Icons NG is enabled).
+- 🎨 **GNOME 50 & 51 Support**: High-fidelity glassmorphism, compatible with GNOME 45 through 51.
 - 🎨 **Built-in Theme Presets**: Pick from System (native), Dark, Light, Nord, Dracula, Gruvbox, or design your own using Custom colors in the Preferences.
 
 ---

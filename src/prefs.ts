@@ -244,6 +244,17 @@ export default class TodoWidgetPreferences extends ExtensionPreferences {
     });
     behaviorGroup.add(lockPositionRow);
 
+    // Always on top row (SwitchRow)
+    const alwaysOnTopRow = new Adw.SwitchRow({
+      title: 'Always on Top',
+      subtitle: 'Keep widget above application windows (recommended on Ubuntu/Wayland if desktop icons block clicks)',
+      active: this._settings.get_boolean('always-on-top'),
+    });
+    alwaysOnTopRow.connect('notify::active', () => {
+      this._settings.set_boolean('always-on-top', alwaysOnTopRow.active);
+    });
+    behaviorGroup.add(alwaysOnTopRow);
+
     // Show Completed tasks (SwitchRow)
     const showCompletedRow = new Adw.SwitchRow({
       title: 'Show Completed Tasks',

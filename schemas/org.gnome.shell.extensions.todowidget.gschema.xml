@@ -21,6 +21,10 @@
     <key name="update-interval" type="i"><default>5000</default></key>
     
     <key name="lock-position" type="b"><default>false</default></key>
+    <key name="always-on-top" type="b">
+      <default>false</default>
+      <summary>Keep widget always on top of application windows</summary>
+    </key>
     <key name="completed-behavior" type="s"><default>'cross'</default></key>
     <key name="show-completed" type="b"><default>true</default></key>
     <key name="projects-mode" type="s"><default>'icon'</default></key>

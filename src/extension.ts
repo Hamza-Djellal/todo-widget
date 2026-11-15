@@ -287,7 +287,7 @@ const TodoWidget = GObject.registerClass(
     constructor(settings: any) {
       super({
         style_class: 'todo-widget-container',
-        vertical: true,
+        orientation: Clutter.Orientation.VERTICAL,
         reactive: true,
         can_focus: true,
       });
@@ -313,7 +313,7 @@ const TodoWidget = GObject.registerClass(
       // Header Box
       this._headerBox = new St.BoxLayout({
         style_class: 'todo-header',
-        vertical: false,
+        orientation: Clutter.Orientation.HORIZONTAL,
         x_expand: true,
       });
 
@@ -396,7 +396,7 @@ const TodoWidget = GObject.registerClass(
       // Body container (2-column layout: Sidebar + Tasks)
       this._bodyBox = new St.BoxLayout({
         style_class: 'todo-body',
-        vertical: false,
+        orientation: Clutter.Orientation.HORIZONTAL,
         x_expand: true,
         y_expand: true,
       });
@@ -404,7 +404,7 @@ const TodoWidget = GObject.registerClass(
       // Left Sidebar for Projects
       this._sidebarBox = new St.BoxLayout({
         style_class: 'todo-sidebar',
-        vertical: true,
+        orientation: Clutter.Orientation.VERTICAL,
       });
 
       this._sidebarTitle = new St.Label({
@@ -423,7 +423,7 @@ const TodoWidget = GObject.registerClass(
 
       this._projectsBox = new St.BoxLayout({
         style_class: 'todo-projects-list',
-        vertical: true,
+        orientation: Clutter.Orientation.VERTICAL,
         x_expand: true,
       });
       this._projectsScrollView.set_child(this._projectsBox);
@@ -441,7 +441,7 @@ const TodoWidget = GObject.registerClass(
       // Right Main Content for Tasks
       this._mainContentBox = new St.BoxLayout({
         style_class: 'todo-main-content',
-        vertical: true,
+        orientation: Clutter.Orientation.VERTICAL,
         x_expand: true,
         y_expand: true,
       });
@@ -457,7 +457,7 @@ const TodoWidget = GObject.registerClass(
 
       this._tasksBox = new St.BoxLayout({
         style_class: 'todo-tasks-list',
-        vertical: true,
+        orientation: Clutter.Orientation.VERTICAL,
         x_expand: true,
       });
       this._tasksScrollView.set_child(this._tasksBox);
@@ -465,7 +465,7 @@ const TodoWidget = GObject.registerClass(
 
       // Add Task Box (collapsed by default)
       this._addBox = new St.BoxLayout({
-        vertical: true,
+        orientation: Clutter.Orientation.VERTICAL,
         x_expand: true,
         visible: false,
       });
@@ -639,8 +639,8 @@ const TodoWidget = GObject.registerClass(
     private _updatePosition(): void {
       const monitor = Main.layoutManager.primaryMonitor;
       if (!monitor) return;
-      const x = (monitor.width * this._settings.get_double('position-x')) / 100;
-      const y = (monitor.height * this._settings.get_double('position-y')) / 100;
+      const x = monitor.x + (monitor.width * this._settings.get_double('position-x')) / 100;
+      const y = monitor.y + (monitor.height * this._settings.get_double('position-y')) / 100;
       this.set_position(Math.round(x), Math.round(y));
     }
 
@@ -869,7 +869,7 @@ const TodoWidget = GObject.registerClass(
         } else {
           const row = new St.BoxLayout({
             style_class: 'todo-project-row',
-            vertical: false,
+            orientation: Clutter.Orientation.HORIZONTAL,
             x_expand: true,
             y_align: Clutter.ActorAlign.CENTER,
           });
@@ -944,7 +944,7 @@ const TodoWidget = GObject.registerClass(
       filteredTasks.forEach((task) => {
         const row = new St.BoxLayout({
           style_class: 'todo-task-row',
-          vertical: false,
+          orientation: Clutter.Orientation.HORIZONTAL,
           x_expand: true,
         });
 
@@ -1292,8 +1292,8 @@ const TodoWidget = GObject.registerClass(
       const monitor = Main.layoutManager.primaryMonitor;
       if (monitor) {
         const [x, y] = this.get_position();
-        const pctX = (x / monitor.width) * 100;
-        const pctY = (y / monitor.height) * 100;
+        const pctX = ((x - monitor.x) / monitor.width) * 100;
+        const pctY = ((y - monitor.y) / monitor.height) * 100;
 
         this._settings.set_double('position-x', pctX);
         this._settings.set_double('position-y', pctY);
@@ -1318,18 +1318,60 @@ const TodoWidget = GObject.registerClass(
 
 export default class TodoWidgetExtension extends Extension {
   private _widget: InstanceType<typeof TodoWidget> | null = null;
+  private _settings: any = null;
+  private _alwaysOnTopId: number = 0;
 
   enable(): void {
-    const settings = this.getSettings();
-    this._widget = new TodoWidget(settings);
-    Main.layoutManager._backgroundGroup.add_child(this._widget);
+    this._settings = this.getSettings();
+    this._widget = new TodoWidget(this._settings);
+    this._attachWidget();
+
+    this._alwaysOnTopId = this._settings.connect('changed::always-on-top', () => {
+      this._detachWidget();
+      this._attachWidget();
+    });
+  }
+
+  private _attachWidget(): void {
+    if (!this._widget || !this._settings) return;
+
+    const alwaysOnTop = this._settings.get_boolean('always-on-top');
+    if (alwaysOnTop) {
+      Main.layoutManager.addTopChrome(this._widget, {
+        affectsStruts: false,
+        trackFullscreen: false,
+      });
+    } else {
+      Main.layoutManager._backgroundGroup.add_child(this._widget);
+    }
+  }
+
+  private _detachWidget(): void {
+    if (!this._widget) return;
+
+    const parent = this._widget.get_parent();
+    if (parent) {
+      if (parent === Main.layoutManager.uiGroup) {
+        Main.layoutManager.removeChrome(this._widget);
+      } else {
+        parent.remove_child(this._widget);
+      }
+    }
   }
 
   disable(): void {
+    if (this._settings && this._alwaysOnTopId) {
+      this._settings.disconnect(this._alwaysOnTopId);
+      this._alwaysOnTopId = 0;
+    }
+
+    this._detachWidget();
+
     if (this._widget) {
-      Main.layoutManager._backgroundGroup.remove_child(this._widget);
       this._widget.destroy();
       this._widget = null;
     }
+
+    this._settings = null;
   }
 }
